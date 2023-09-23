@@ -16,15 +16,17 @@ export class STDemoComponent implements OnInit {
   events: G2MiniBarData[] = [];
   scroll = { y: '230px' };
   columns: STColumn[] = [
-    { title: 'id', index: 'id.value', type: 'checkbox' },
+    { title: '', type: 'no', width: 200 },
+    { title: 'id', index: 'id.value', type: 'checkbox', width: 80 },
     { title: 'Avatar', index: 'picture.thumbnail', type: 'img', width: 80 },
     {
       title: 'Name',
       index: 'name.first',
-      width: 150,
+      width: 250,
       format: item => `${item.name.first} ${item.name.last}`,
       type: 'link',
-      click: item => this.message.info(`${item.name.first}`)
+      click: item => this.message.info(`${item.name.first}`),
+      exported: false,
     },
     { title: 'Email', index: 'email' },
     {
@@ -39,7 +41,7 @@ export class STDemoComponent implements OnInit {
       },
       width: 120
     },
-    { title: 'Events', render: 'events', width: 90 },
+    { title: 'Events', render: 'events', width: 200 },
     { title: 'Registered', index: 'registered.date', type: 'date', width: 170 },
     {
       title: 'Actions',
