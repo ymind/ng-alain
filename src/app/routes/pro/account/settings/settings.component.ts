@@ -1,8 +1,9 @@
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivationEnd, Router } from '@angular/router';
 import { _HttpClient } from '@delon/theme';
 import { NzMenuModeType } from 'ng-zorro-antd/menu';
-import { fromEvent, Subscription, debounceTime, filter } from 'rxjs';
+import { fromEvent, debounceTime, filter } from 'rxjs';
 
 @Component({
   selector: 'app-account-settings',
@@ -10,9 +11,11 @@ import { fromEvent, Subscription, debounceTime, filter } from 'rxjs';
   styleUrls: ['./settings.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProAccountSettingsComponent implements AfterViewInit, OnDestroy {
-  private resize$!: Subscription;
-  private router$: Subscription;
+export class ProAccountSettingsComponent implements AfterViewInit {
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly el: HTMLElement = inject(ElementRef).nativeElement;
+  private readonly d$ = inject(DestroyRef);
   mode: NzMenuModeType = 'inline';
   title!: string;
   menus: Array<{ key: string; title: string; selected?: boolean }> = [
@@ -33,13 +36,6 @@ export class ProAccountSettingsComponent implements AfterViewInit, OnDestroy {
       title: '新消息通知'
     }
   ];
-  constructor(
-    private router: Router,
-    private cdr: ChangeDetectorRef,
-    private el: ElementRef<HTMLElement>
-  ) {
-    this.router$ = this.router.events.pipe(filter(e => e instanceof ActivationEnd)).subscribe(() => this.setActive());
-  }
 
   private setActive(): void {
     const key = this.router.url.substring(this.router.url.lastIndexOf('/') + 1);
@@ -47,6 +43,7 @@ export class ProAccountSettingsComponent implements AfterViewInit, OnDestroy {
       i.selected = i.key === key;
     });
     this.title = this.menus.find(w => w.selected)!.title;
+    this.cdr.detectChanges();
   }
 
   to(item: { key: string }): void {
@@ -54,7 +51,7 @@ export class ProAccountSettingsComponent implements AfterViewInit, OnDestroy {
   }
 
   private resize(): void {
-    const el = this.el.nativeElement;
+    const el = this.el;
     let mode: NzMenuModeType = 'inline';
     const { offsetWidth } = el;
     if (offsetWidth < 641 && offsetWidth > 400) {
@@ -68,13 +65,17 @@ export class ProAccountSettingsComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.resize$ = fromEvent(window, 'resize')
-      .pipe(debounceTime(200))
-      .subscribe(() => this.resize());
-  }
+    this.router.events
+      .pipe(
+        takeUntilDestroyed(this.d$),
+        filter(e => e instanceof ActivationEnd)
+      )
+      .subscribe(() => this.setActive());
 
-  ngOnDestroy(): void {
-    this.resize$.unsubscribe();
-    this.router$.unsubscribe();
+    fromEvent(window, 'resize')
+      .pipe(takeUntilDestroyed(this.d$), debounceTime(200))
+      .subscribe(() => this.resize());
+
+    this.setActive();
   }
 }
